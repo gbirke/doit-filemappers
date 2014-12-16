@@ -56,10 +56,10 @@ class BaseFileMapper(object):
         return [p for p in pathlib.Path(self.dir).glob(self.src) if self._is_file_or_symlink(p)]
 
     def _is_file_or_symlink(self, f):
-        if not self.follow_symlinks and p.is_symlink():
+        if not self.follow_symlinks and f.is_symlink():
             return False
         else:
-            return p.is_file()
+            return f.is_file()
 
 
 class IdentityMapper(BaseFileMapper):
