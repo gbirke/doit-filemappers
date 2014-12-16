@@ -43,10 +43,10 @@ class BaseFileMapper(object):
         """ Get a task dictionary for DoIt. """
         file_map = self.get_map()
         sources, targets = zip(*file_map)
-        task["targets"] = targets
+        task["targets"] = [str(t) for t in targets]
         task["action"]  = self.get_action()
         if self.file_dep:
-            task["file_dep"] = sources
+            task["file_dep"] = [str(s) for s in sources]
         return task
 
     def _get_files_from_glob(self):
