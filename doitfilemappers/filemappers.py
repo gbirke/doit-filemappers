@@ -72,3 +72,14 @@ class IdentityMapper(BaseFileMapper):
     def _initialize_map(self):
         self.map = [(f, f) for f in self._get_files_from_glob()]
 
+class RegexMapper(BaseFileMapper):
+    def __init__(self, src, callback=None, search=r".*", replace=r"\0", **kwargs):
+        super(RegexMapper, self).__init__(src, callback, **kwargs)
+        self.pattern = re.compile(search)
+        self.replace = replace
+
+    def _initialize_map(self):
+        self.map = [(f, self._get_target_from_source(f)) for f in self._get_files_from_glob()]
+
+    def _get_target_from_source(self, source):
+        return pathlib.Path(re.sub(self.pattern, self.replace, str(source)))

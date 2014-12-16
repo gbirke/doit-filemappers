@@ -42,7 +42,18 @@ def test_identitymapper_action_is_called_for_each_target(mock_glob):
     custom_callback = mock.Mock(return_value=True)
     mapper = fm.IdentityMapper("*.foo", custom_callback)
     a = mapper.get_action()
-    a(["one.bar"]) # targets are ignored
+    assert a(["one.bar"]) # targets are ignored
     expected = [mock.call(p1, p1), mock.call(p2, p2)]
     assert custom_callback.call_args_list == expected
-    
+
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_regexmapper_replaces_placeholders(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.foo")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.RegexMapper("*.foo", None, search=r"(.*)\.foo$", replace=r"\1.bar")
+    t = mapper.get_task()
+    assert t["targets"] == ["one.bar", "two.bar"]
+    assert t["file_dep"] == ["one.foo", "two.foo"]
+
+# TODO test dir param
