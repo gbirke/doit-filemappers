@@ -23,3 +23,12 @@ def test_identitymapper_input_equals_output(mock_glob):
     mapper = fm.IdentityMapper("*.foo")
     m = mapper.get_map()
     assert m == [(p1, p1), (p2, p2)]
+
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_identitymapper_input_equals_output(mock_glob):
+    p1 = get_path_mock()
+    p2 = get_path_mock()
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.IdentityMapper("*.foo")
+    m = mapper.get_map()
+    assert m == [(p1, p1), (p2, p2)]

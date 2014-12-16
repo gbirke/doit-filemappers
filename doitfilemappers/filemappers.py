@@ -1,8 +1,9 @@
 import pathlib
 import re
-
+import abc
 
 class BaseFileMapper(object):
+    __metaclass__  = abc.ABCMeta
 
     def __init__(self, src, callback=None, **kwargs):
         self.map_initialized = False
@@ -20,8 +21,9 @@ class BaseFileMapper(object):
             self.map_initialized = True
         return self.map
 
+    @abc.abstractmethod
     def _initialize_map(self):
-        raise NotImplementedError
+        """ Initialize self.map with a mapping that makes sense for this mapping class. """
 
     def get_action(self):
         """ Return a function that iterates over the map, calling the callback.
