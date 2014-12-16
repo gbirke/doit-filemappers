@@ -7,7 +7,8 @@ setup(name='doit-filemappers',
       author='Gabriel Birke',
       author_email='gabriel.birke@gmail.com',
       license='MIT',
-      install_requires = ['doit'],
+      install_requires = ['doit', 'pathlib'],
+      tests_require = ['mock', 'pytest'],
       packages = find_packages()
 )
 
