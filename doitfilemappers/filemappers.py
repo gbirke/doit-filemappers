@@ -48,6 +48,11 @@ class BaseFileMapper(object):
         return task
 
     def _get_files_from_glob(self):
+        """ Get a list of files from the glob expression in self.src
+
+            If self.follow_symlinks is false, symlinks will be ignored, 
+            otherwise smylinks to files will be returned.
+        """
         return [p for p in pathlib.Path(self.dir).glob(self.src) if self._is_file_or_symlink(p)]
 
     def _is_file_or_symlink(self, f):

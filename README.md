@@ -1,5 +1,5 @@
 # File-based workflows for the DoIt automation tool
-The goal of this project is to create a library of file collection and mapping classes that provide actions, file_deps and targets to [DoIt][1] tasks. The mappers allow specifying tasks that rely on globs and file name mapping rather than having to explicity name every file dependency and every target. This is for text and data processing tasks that happen in several stages where data is converted, enriched, filtered and merged.
+The goal of this project is to create a library of file collection and mapping classes that provide `action`, `file_dep` and `target` parameters to [DoIt][1] tasks. The mappers allow specifying tasks that rely on globs and file name mapping rather than having to explicity name every file dependency and every target. This is for text and data processing tasks that happen in several stages where data is converted, enriched, filtered and merged.
 
 The classes are inspired by concepts in the popular [Ant][2] and [Ruffus][3] build tools.
 
@@ -20,6 +20,8 @@ def task_convert_to_json():
 A file mapper can produce a "source" file for every target file. Consider the easiest case where you want to create a new, processed file for every source file:
 
 ```python
+from doitfilemappers import GlobMapper
+
 def task_convert_to_json():
     def process_file(in_file, out_file):
         with open(in_file, "r") as _in, open(out_file, "w") as _out:
@@ -43,6 +45,10 @@ The following parameters are common for all mappers
 - `dir`: Operating directory. The path expressions in `from` and `to` are relative to this directory. Defaults to `.` (current directory).
 - `file_dep`: If true, `get_task` creates `file_dep` with the source files from the mapper. For most mappers it is true.
 - `follow_symlinks`: If set to false, only files are mapped. Defaults to true.
+
+### Using mappers with commandline tasks
+
+TODO
 
 ## Types of Mappers
 ### IdentityMapper
