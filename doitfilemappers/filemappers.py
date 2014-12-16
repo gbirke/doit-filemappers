@@ -41,7 +41,7 @@ class BaseFileMapper(object):
 
     def get_task(self, task={}):
         """ Get a task dictionary for DoIt. """
-        file_map = self.get_map
+        file_map = self.get_map()
         sources, targets = zip(*file_map)
         task["targets"] = targets
         task["action"]  = self.get_action()
@@ -65,6 +65,10 @@ class BaseFileMapper(object):
 
 
 class IdentityMapper(BaseFileMapper):
+    def __init__(self, src, callback=None, **kwargs):
+        super(IdentityMapper, self).__init__(src, callback, **kwargs)
+        self.file_dep = kwargs["file_dep"] if "file_dep" in kwargs else False
+
     def _initialize_map(self):
         self.map = [(f, f) for f in self._get_files_from_glob()]
 
