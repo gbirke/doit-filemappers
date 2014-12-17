@@ -52,6 +52,28 @@ The following parameters are common for all mappers
 
 TODO
 
+### Decorators for your callback function
+If you'd rather work with open files instead of opening and closing them yourself, you can use the `@open_files` decorator:
+
+```python
+@open_files
+def process_file(in_file, out_file):
+    data = in_file.read()
+    # process data
+    out_file.write(data)
+```
+
+Normally the input file is opened in read mode, the output file is opened in write mode. You can change the modes with the `in_mode` and `out_mode` parameters for `@open_file`.
+
+If you want to keep track of the number of files that were processed, use the `@track_file_count` decorator and a `file_count` parameter in your callback:
+
+```python
+@track_file_count
+def process_file(in_file, out_file, file_count=0):
+    if file_count > 99:
+        raise RuntimeError("Too many files, I quit!")
+```
+
 ## Types of Mappers
 ### IdentityMapper
 This simple mapper returns all files found by the `src` glob as targets and has no `file_dep` (because that would create a cyclic dependency). 
@@ -114,7 +136,8 @@ def task_process_text():
 ```
 
 ### MergeMapper
-TODO show how to track if a file is the first in the map with a closure. 
+
+In merge mapper you have to open the output file for appending (mode `a`) instead of opening it while truncating it (mode `w`). If the target file exists, the content from all source files will be appended to it - not a desired bahvior in most cases. To avoid a separate task where you delete the target file before opening using the task with the MergeMapper you can use the `@open_files_for_merge` decorator which keeps track of the files, opens the first one with mode `w` and all following files with mode `a`.
 
 ### CompositeMapper
 This mapper returns the combined map of several mappers.

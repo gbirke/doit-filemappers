@@ -115,3 +115,13 @@ class GlobMapper(RegexMapper):
             raise RuntimeError("Glob pattern can only contain one asterisk.")
         parts = pattern.split("*", 2)
         return "^" + re.escape(parts[0]) + "(.*)" + re.escape(parts[1]) + "$"
+
+def open_files(func, in_mode="r", out_mode="w"):
+    """ Open files for callback """
+    def file_opener(_in, _out, *args, **kwargs):
+        with _in.open(in_mode) as in_handle, _out.open(out_mode) as out_handle:
+            ok = func(in_handle, out_handle, *args, **kwargs)
+        return ok
+    return file_opener
+
+# TODO track_file_count and open_files_for_merge decorators

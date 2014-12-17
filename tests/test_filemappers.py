@@ -98,3 +98,17 @@ def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
         fm.GlobMapper("one.foo", None, "*.bar")
     assert "asterisk" in e.value.message
 
+def test_file_handle_decorator_opens_files():
+    @fm.open_files
+    def check(_in, _out):
+        pass
+    p_in = mock.Mock()
+    p_in_file = mock.MagicMock(spec=file)
+    p_in.open.return_value = p_in_file
+    p_out = mock.Mock()
+    p_out_file = mock.MagicMock()
+    p_out.open.return_value = mock.MagicMock(spec=file)
+    check(p_in, p_out)
+    p_in.open.assert_called_with("r")
+    p_out.open.assert_called_with("w")
+
