@@ -1,6 +1,7 @@
 import doitfilemappers.filemappers as fm
 
 import mock
+import pytest
 
 def get_path_mock(name=""):
     p = mock.MagicMock()
@@ -67,5 +68,33 @@ def test_regexmapper_ignores_nonmatching(mock_glob):
     assert t["file_dep"] == ["one.foo"]
 
 
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_globmapper_replaces_asterisk(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.foo")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.GlobMapper("*.foo", None, "*.bar")
+    t = mapper.get_task()
+    assert t["targets"] == ["one.bar", "two.bar"]
+    assert t["file_dep"] == ["one.foo", "two.foo"]
 
-# TODO test dir param
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_globmapper_uses_search_pattern_if_provided(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.foo")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.GlobMapper("**/*.foo", None, "*.bar", "*.foo")
+    t = mapper.get_task()
+    assert t["targets"] == ["one.bar", "two.bar"]
+    assert t["file_dep"] == ["one.foo", "two.foo"]
+
+def test_globmapper_raises_exception_when_pattern_contains_more_than_one_asterisk():
+    with pytest.raises(RuntimeError) as e:
+        fm.GlobMapper("**/*.foo", None, "*.bar")
+    assert "asterisk" in e.value.message
+
+def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
+    with pytest.raises(RuntimeError) as e:
+        fm.GlobMapper("one.foo", None, "*.bar")
+    assert "asterisk" in e.value.message
+

@@ -59,12 +59,29 @@ This simple mapper returns all files found by the `src` glob as targets and has 
 The IdentityMapper is useful for processing files in-place or processing files without changing them.
 
 ### GlobMapper
+The GlobMapper uses a single asterisk to define a simple replacement pattern.
+
+```python
+def task_json2html():
+    def process_file(in_file, out_file):
+        # do stuff here
+    mapper = GlobMapper("*.json", process_file, "*.html")
+    return mapper.get_task()
+```
+
+If your `src` parameter contains a single file name, a directory glob like `**/*.json`, multiple asterisks like `*.txt*` or complex globs like `ba[rz].txt` you **must** provide a replacement pattern that contains a single asterisk. 
+
+```python
+mapper = GlobMapper("**/*.json", process_file, "*.html", "*.json")
+```
+
+If a single asterisk is not sufficient for your replacement needs, use `RegexMapper` instead.
+
 ### RegexMapper
 
 The RegexMapper uses a regular expression to allow for more complex filename transformations.
 
 ```python
-from doitfilemappers import RegexMapper
 import shutils
 
 def task_move_files():
@@ -76,8 +93,6 @@ def task_move_files():
 RegexMapper has the parameter `ignore_nonmatching`. If set to `False`, the map will contain files that do not match the search expression. 
 
 ```python
-from doitfilemappers import RegexMapper
-
 def task_process_text():
     """ 
     Process all files and output files named "Foo_Bar.txt" as "Bar-Foo.txt".
@@ -99,13 +114,12 @@ def task_process_text():
 ```
 
 ### MergeMapper
-### CountMapper
+TODO show how to track if a file is the first in the map with a closure. 
+
 ### CompositeMapper
 This mapper returns the combined map of several mappers.
 
 ```python
-from doitfilemappers import GlobMapper, CompositeMapper
-
 def task_convert_images():
     def convert_img(image_in, image_out):
         # do some processing here

@@ -97,3 +97,21 @@ class RegexMapper(BaseFileMapper):
         Always returns True if ignore_nonmatching is set to False.
         """
         return not self.ignore_nonmatching or self.pattern.search(str(source))
+
+class GlobMapper(RegexMapper):
+    def __init__(self, src="*", callback=None, replace="*", pattern=None, **kwargs):
+        if pattern:
+            search = self._get_search_regex(pattern)
+        else:
+            search = self._get_search_regex(src)
+        replace_pattern = replace.replace("*", r"\1", 1)
+        super(GlobMapper, self).__init__(src, callback, search, replace_pattern)
+
+    def _get_search_regex(self, pattern):
+        cnt = pattern.count("*")
+        if cnt == 0:
+            raise RuntimeError("Glob pattern must contain one asterisk.")
+        elif cnt > 1:
+            raise RuntimeError("Glob pattern can only contain one asterisk.")
+        parts = pattern.split("*", 2)
+        return "^" + re.escape(parts[0]) + "(.*)" + re.escape(parts[1]) + "$"
