@@ -79,13 +79,21 @@ class IdentityMapper(BaseFileMapper):
         return [(f, f) for f in self._get_files_from_glob(src)]
 
 class RegexMapper(BaseFileMapper):
-    def __init__(self, src="*", callback=None, search=r".*", replace=r"\0", **kwargs):
+    def __init__(self, src="*", callback=None, search=r".*", replace=r"\0", ignore_nonmatching=True, **kwargs):
         super(RegexMapper, self).__init__(src, callback, **kwargs)
         self.pattern = re.compile(search)
         self.replace = replace
+        self.ignore_nonmatching = ignore_nonmatching
 
     def _create_map(self, src):
-        return [(f, self._get_target_from_source(f)) for f in self._get_files_from_glob(src)]
+        return [(f, self._get_target_from_source(f)) for f in self._get_files_from_glob(src) if self._source_matches(f)]
 
     def _get_target_from_source(self, source):
         return pathlib.Path(re.sub(self.pattern, self.replace, str(source)))
+
+    def _source_matches(self, source):
+        """
+        Check if source matches the search pattern.
+        Always returns True if ignore_nonmatching is set to False.
+        """
+        return not self.ignore_nonmatching or self.pattern.search(str(source))

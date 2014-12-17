@@ -56,4 +56,16 @@ def test_regexmapper_replaces_placeholders(mock_glob):
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_regexmapper_ignores_nonmatching(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.baz")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.RegexMapper(search=r"(.*)\.foo$", replace=r"\1.bar", ignore_nonmatching=True)
+    t = mapper.get_task()
+    assert t["targets"] == ["one.bar"]
+    assert t["file_dep"] == ["one.foo"]
+
+
+
 # TODO test dir param
