@@ -48,7 +48,7 @@ class BaseFileMapper(object):
         """ Get a task dictionary for DoIt. """
         file_map = self.get_map()
         sources, targets = zip(*file_map)
-        task["targets"] = [str(t) for t in targets]
+        task["targets"] = list(set([str(t) for t in targets]))
         task["action"]  = self.get_action()
         if self.file_dep:
             task["file_dep"] = [str(s) for s in sources]
@@ -124,6 +124,21 @@ class GlobMapper(RegexMapper):
             raise RuntimeError("Glob pattern can only contain one asterisk.")
         parts = pattern.split("*", 2)
         return "^" + re.escape(parts[0]) + "(.*)" + re.escape(parts[1]) + "$"
+
+class MergeMapper(BaseFileMapper):
+    def __init__(self, src="*", callback=None, target=None, **kwargs):
+        super(MergeMapper, self).__init__(src, callback, **kwargs)
+        self.target = target
+
+    def _create_map(self, src):
+        if isinstance(self.target, basestring) and self.target:
+            target = pathlib.Path(self.target)
+        elif isinstance(self.target, pathlib.Path):
+            target = self.target
+        else:
+            raise RuntimeError("Target must be a string or Path, {} given!".format(type(self.target)))
+        return [(f, target) for f in self._get_files_from_glob(src)]
+
 
 def open_files(func, in_mode="r", out_mode="w"):
     """ Open files for callback """

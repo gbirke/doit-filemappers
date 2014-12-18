@@ -2,9 +2,10 @@ import doitfilemappers.filemappers as fm
 
 import mock
 import pytest
+import pathlib
 
 def get_path_mock(name=""):
-    p = mock.MagicMock()
+    p = mock.MagicMock(spec=pathlib.Path)
     p.is_file.return_value = True
     p.is_symlink.return_value = False 
     p.__str__.return_value = name
@@ -34,7 +35,7 @@ def test_identitymapper_get_task_returns_targets_and_callable(mock_glob):
     mock_glob.return_value = [p1, p2]
     mapper = fm.IdentityMapper("*.foo")
     t = mapper.get_task()
-    assert t["targets"] == ["one.foo", "two.foo"]
+    assert set(t["targets"]) == set(["one.foo", "two.foo"])
     assert hasattr(t["action"], "__call__")
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
@@ -99,6 +100,34 @@ def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
     with pytest.raises(RuntimeError) as e:
         fm.GlobMapper("one.foo", None, "*.bar")
     assert "asterisk" in e.value.message
+
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_mergemapper_returns_the_same_target_for_all_sources(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.foo")
+    tgt = get_path_mock("target.dummy")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.MergeMapper("*.foo", None, tgt)
+    t = mapper.get_task()
+    assert t["targets"] == ["target.dummy"]
+    assert t["file_dep"] == ["one.foo", "two.foo"]
+
+
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_mergemapper_accepts_string_as_target_name(mock_glob):
+    p1 = get_path_mock("one.foo")
+    p2 = get_path_mock("two.foo")
+    mock_glob.return_value = [p1, p2]
+    mapper = fm.MergeMapper("*.foo", None, "target.dummy")
+    t = mapper.get_task()
+    assert t["targets"] == ["target.dummy"]
+    assert t["file_dep"] == ["one.foo", "two.foo"]
+
+def test_mergemapper_raises_exception_without_target():
+    with pytest.raises(RuntimeError) as e:
+        mapper = fm.MergeMapper("*.foo")
+        mapper.get_map()
+    assert "Target" in e.value.message
 
 def test_file_handle_decorator_opens_files():
     @fm.open_files
