@@ -170,4 +170,19 @@ def track_file_count(func):
         return ok
     return file_tracker
 
+def open_files_with_merge(func, in_mode="r", out_mode="w", out_append_mode="a"):
+    opened = {}
+    def file_opener(_in, _out, *args, **kwargs):
+        out_name = str(_out)
+        if out_name in opened:
+            o_mode = out_append_mode
+            opened[out_name] += 1
+        else:
+            o_mode = out_mode
+            opened[out_name] = 1
+        with _in.open(in_mode) as in_handle, _out.open(o_mode) as out_handle:
+            ok = func(in_handle, out_handle, *args, **kwargs)
+        return ok
+    return file_opener
+
 # TODO  and open_files_for_merge decorators

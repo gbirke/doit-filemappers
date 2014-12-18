@@ -11,7 +11,14 @@ def get_path_mock(name=""):
     p.__str__.return_value = name
     return p
 
-# The IdentityMapper is used for many test of BaseMapper functionality
+def get_path_open_mock(name=""):
+    p = mock.MagicMock(spec=pathlib.Path)
+    p.__str__.return_value = name
+    p_file = mock.MagicMock(spec=file)
+    p.open.return_value = p_file
+    return p
+
+# The IdentityMapper is used for many tests of BaseMapper functionality
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_identitymapper_expands_glob(mock_glob):
@@ -150,12 +157,8 @@ def test_file_handle_decorator_opens_files():
     @fm.open_files
     def check(_in, _out):
         pass
-    p_in = mock.Mock()
-    p_in_file = mock.MagicMock(spec=file)
-    p_in.open.return_value = p_in_file
-    p_out = mock.Mock()
-    p_out_file = mock.MagicMock()
-    p_out.open.return_value = mock.MagicMock(spec=file)
+    p_in = get_path_open_mock()
+    p_out = get_path_open_mock()
     check(p_in, p_out)
     p_in.open.assert_called_with("r")
     p_out.open.assert_called_with("w")
@@ -168,3 +171,14 @@ def test_track_file_count_tracks_calls():
     assert check(None, None) == 1
     assert check(None, None) == 2
 
+def test_merge_file_handle_decorator_opens_files():
+    @fm.open_files_with_merge
+    def check(_in, _out):
+        pass
+    p_in = get_path_open_mock("in")
+    p_out1 = get_path_open_mock("out")
+    p_out2 = get_path_open_mock("out")
+    check(p_in, p_out1)
+    p_out1.open.assert_called_once_with("w")
+    check(p_in, p_out2)
+    p_out2.open.assert_called_once_with("a")

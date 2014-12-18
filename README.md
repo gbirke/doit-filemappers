@@ -54,6 +54,8 @@ The following parameters are common for all mappers
 TODO
 
 ### Decorators for your callback function
+
+#### `@open_files`
 If you'd rather work with open files instead of opening and closing them yourself, you can use the `@open_files` decorator:
 
 ```python
@@ -66,6 +68,10 @@ def process_file(in_file, out_file):
 
 Normally the input file is opened in read mode, the output file is opened in write mode. You can change the modes with the `in_mode` and `out_mode` parameters for `@open_file`.
 
+#### `@open_files_with_merge`
+This decorator works like `@open_files` except it tracks which target files have already been opened. Files that were opened before are opened in append mode (`a`). You can customize the modes with the  `in_mode`, `out_mode` and `out_append_mode` parameters.
+
+#### `@track_file_count`
 If you want to keep track of the number of files that were processed, use the `@track_file_count` decorator and a `file_count` parameter in your callback:
 
 ```python
@@ -122,7 +128,7 @@ mapper = GlobMapper("**/*.json", process_file, "*.html", "*.json")
 
 If a single asterisk is not sufficient for your replacement needs, use `RegexMapper` instead.
 
-**Warning:** Some patterns will create the same target name for different source names which may lead to overwriting the target.
+**Warning:** Some patterns will create the same target name for different source names which may lead to overwriting the target. If you want to append instead, use `@open_files_with_merge`.
 
 ### RegexMapper
 
@@ -160,11 +166,23 @@ def task_process_text():
     return mapper.get_task()
 ```
 
-**Warning:** Some patterns will create the same target name for different source names which may lead to overwriting the target.
+**Warning:** Some patterns will create the same target name for different source names which may lead to overwriting the target. If you want to append instead, use `@open_files_with_merge`.
 
 ### MergeMapper
+The MergeMapper returns the same target file name for all source names.
 
-In merge mapper you have to open the output file for appending (mode `a`) instead of opening it while truncating it (mode `w`). If the target file exists, the content from all source files will be appended to it - not a desired bahvior in most cases. To avoid a separate task where you delete the target file before opening using the task with the MergeMapper you can use the `@open_files_for_merge` decorator which keeps track of the files, opens the first one with mode `w` and all following files with mode `a`.
+When using MergeMapper you have to open the output file for appending (mode `a`) instead of opening it while truncating it (mode `w`). This can be a problem because if the target file exists from a previous task run, the content from the source files will be appended to it - not a desired behavior in most cases. To avoid a separate task where you delete the target file, use the `@open_files_with_merge` decorator which keeps track of the files, opens the first one with mode `w` and all following files with mode `a`.
+
+```python
+def task_all_reports():
+    @open_files_with_merge()
+    def process_csv(_in, _out):
+        data = _in.read()
+        # process data
+        _out.write(data)
+    mapper = MergeMapper("*.csv", process_csv, "finished/combined.csv")
+    return mapper.get_task()
+```
 
 ### CompositeMapper
 This mapper returns the combined map of several mappers.
