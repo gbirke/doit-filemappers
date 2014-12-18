@@ -69,6 +69,15 @@ class BaseFileMapper(object):
         else:
             return f.is_file()
 
+    @property
+    def src(self):
+        return self._src
+
+    @src.setter
+    def src(self, src):
+        self._src = src
+        self.map_initialized = False
+
 
 class IdentityMapper(BaseFileMapper):
     def __init__(self, src="*", callback=None, **kwargs):

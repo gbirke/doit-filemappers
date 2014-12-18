@@ -10,6 +10,8 @@ def get_path_mock(name=""):
     p.__str__.return_value = name
     return p
 
+# The IdentityMapper is used for many test of BaseMapper functionality
+
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_identitymapper_expands_glob(mock_glob):
     mapper = fm.IdentityMapper("*.foo")
