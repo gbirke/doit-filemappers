@@ -136,7 +136,6 @@ def test_mergemapper_returns_the_same_target_for_all_sources(mock_glob):
     assert t["targets"] == ["target.dummy"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
-
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_mergemapper_accepts_string_as_target_name(mock_glob):
     p1 = get_path_mock("one.foo")
@@ -152,6 +151,22 @@ def test_mergemapper_raises_exception_without_target():
         mapper = fm.MergeMapper("*.foo")
         mapper.get_map()
     assert "Target" in e.value.message
+
+@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
+def test_compositemapper_collects_from_all_sub_mappers(mock_glob):
+    s1 = get_path_mock("one.foo")
+    s2 = get_path_mock("two.foo")
+    t1 = get_path_mock("one.bar")
+    t2 = get_path_mock("two.bar")
+    # Mock GlobMappers
+    glob_mapper1 = mock.MagicMock()
+    glob_mapper1.get_map.return_value = [(s1, t1)]
+    glob_mapper2 = mock.MagicMock()
+    glob_mapper2.get_map.return_value = [(s2, t2)]
+    mapper = fm.CompositeMapper([glob_mapper1, glob_mapper2], None)
+    t = mapper.get_task()
+    assert set(t["targets"]) == set(["one.bar","two.bar"])
+    assert set(t["file_dep"]) == set(["one.foo","two.foo"])
 
 def test_file_handle_decorator_opens_files():
     @fm.open_files

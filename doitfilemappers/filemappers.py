@@ -151,6 +151,16 @@ class MergeMapper(BaseFileMapper):
             raise RuntimeError("Target must be a string or Path, {} given!".format(type(self.target)))
         return [(f, target) for f in self._get_files_from_glob(src)]
 
+class CompositeMapper(BaseFileMapper):
+    def __init__(self, sub_mappers=[], callback=None, **kwargs):
+        super(CompositeMapper, self).__init__("*", callback, **kwargs)
+        self.sub_mappers = sub_mappers
+
+    def _create_map(self, src):
+        combined_map = []
+        for sub_mapper in self.sub_mappers:
+            combined_map += sub_mapper.get_map()
+        return combined_map
 
 def open_files(func, in_mode="r", out_mode="w"):
     """ Open files for callback """

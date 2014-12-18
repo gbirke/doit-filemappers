@@ -185,7 +185,7 @@ def task_all_reports():
 ```
 
 ### CompositeMapper
-This mapper returns the combined map of several mappers.
+The CompositeMapper returns the combined map of several mappers. It has no `src` parameter. 
 
 ```python
 def task_convert_images():
@@ -198,6 +198,10 @@ def task_convert_images():
     mapper = CompositeMapper(sub_mappers, convert_img)
     return mapper.get_task()
 ```
+
+The example shows that you can omit the `callback` parameter for the sub-mappers, because only the callback of the CompositeMapper will be executed.
+
+Note that the generated map may contain the same source and/or target files multiple times. You must then write your callback in way that can avoids processing the same source file multiple times or overwriting the same target file.
 
 ### ChainedMapper
 
