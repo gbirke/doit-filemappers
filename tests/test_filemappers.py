@@ -19,6 +19,23 @@ def test_identitymapper_expands_glob(mock_glob):
     m = mapper.get_map()
     mock_glob.assert_called_with("*.foo")
 
+def test_identitymapper_get_task_fails_if_map_is_empty():
+    mapper = fm.IdentityMapper("*.foo")
+    with pytest.raises(RuntimeError) as e:
+        mapper.get_task()
+    assert "empty" in e.value.message
+
+def test_identitymapper_empty_map_default_action_returns_true():
+    mapper = fm.IdentityMapper("*.foo", allow_empty_map=True)
+    task = mapper.get_task()
+    assert task["actions"][0]([])
+
+def test_identitymapper_get_task_returns_additional_parameters():
+    mapper = fm.IdentityMapper("*.foo", allow_empty_map=True)
+    task = mapper.get_task({"title":"Test dummy"})
+    assert "title" in task
+    assert task["title"] == "Test dummy"
+
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_identitymapper_input_equals_output(mock_glob):
     p1 = get_path_mock()
@@ -36,7 +53,7 @@ def test_identitymapper_get_task_returns_targets_and_callable(mock_glob):
     mapper = fm.IdentityMapper("*.foo")
     t = mapper.get_task()
     assert set(t["targets"]) == set(["one.foo", "two.foo"])
-    assert hasattr(t["action"], "__call__")
+    assert hasattr(t["actions"][0], "__call__")
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_identitymapper_action_is_called_for_each_target(mock_glob):

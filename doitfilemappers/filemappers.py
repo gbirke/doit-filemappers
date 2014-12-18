@@ -13,6 +13,7 @@ class BaseFileMapper(object):
         self.follow_symlinks = kwargs.get("follow_symlinks", True)
         self.dir = kwargs.get("dir", ".")
         self.file_dep = kwargs.get("file_dep", True)
+        self.allow_empty_map = kwargs.get("allow_empty_map", False)
 
     def get_map(self, src=None):
         """
@@ -47,11 +48,22 @@ class BaseFileMapper(object):
     def get_task(self, task={}):
         """ Get a task dictionary for DoIt. """
         file_map = self.get_map()
+        if not file_map:
+            if self.allow_empty_map:
+                return self._get_task_for_empty_map(task)
+            else:
+                raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
         sources, targets = zip(*file_map)
         task["targets"] = list(set([str(t) for t in targets]))
-        task["action"]  = self.get_action()
+        task["actions"]  = [self.get_action()]
         if self.file_dep:
             task["file_dep"] = [str(s) for s in sources]
+        return task
+
+    def _get_task_for_empty_map(self, task):
+        """ Provide a NOP action if the task does not contain an action """
+        if "actions" not in task:
+            task["actions"] = [lambda targets: True]
         return task
 
     def _get_files_from_glob(self, src):
@@ -123,7 +135,7 @@ class GlobMapper(RegexMapper):
         elif cnt > 1:
             raise RuntimeError("Glob pattern can only contain one asterisk.")
         parts = pattern.split("*", 2)
-        return "^" + re.escape(parts[0]) + "(.*)" + re.escape(parts[1]) + "$"
+        return "^" + re.escape(parts[0]) + "(.+)" + re.escape(parts[1]) + "$"
 
 class MergeMapper(BaseFileMapper):
     def __init__(self, src="*", callback=None, target=None, **kwargs):
