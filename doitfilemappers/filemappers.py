@@ -124,4 +124,14 @@ def open_files(func, in_mode="r", out_mode="w"):
         return ok
     return file_opener
 
-# TODO track_file_count and open_files_for_merge decorators
+def track_file_count(func):
+    # See http://stackoverflow.com/questions/3190706/nonlocal-keyword-in-python-2-x
+    # to learn why this must be a dictionary
+    call_count = {"count":0}
+    def file_tracker(_in, _out, *args, **kwargs):
+        ok = func(_in, _out, file_count=call_count["count"], *args, **kwargs)
+        call_count["count"] += 1
+        return ok
+    return file_tracker
+
+# TODO  and open_files_for_merge decorators

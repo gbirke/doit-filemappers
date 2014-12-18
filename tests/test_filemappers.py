@@ -112,3 +112,11 @@ def test_file_handle_decorator_opens_files():
     p_in.open.assert_called_with("r")
     p_out.open.assert_called_with("w")
 
+def test_track_file_count_tracks_calls():
+    @fm.track_file_count
+    def check(_in, _out, file_count=0):
+        return file_count
+    assert check(None, None) == 0
+    assert check(None, None) == 1
+    assert check(None, None) == 2
+
