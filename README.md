@@ -49,6 +49,9 @@ The following parameters are common for all mappers
 - `follow_symlinks`: If set to false, only files are mapped. Defaults to true.
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
 
+### Multiple dependent mappers
+If you are building a chain of mappers where the output files (targets) of one processing step become the input (sources) of the next step, you can't use a glob expression for the `src` parameter after the first because the files don't exist yet. Instead, you must set the `src` of each task after the first to the `target`output of the preceding task. The ChainedMapper (see below) does that for you.
+
 ### Using mappers with commandline tasks
 
 TODO
@@ -205,13 +208,22 @@ Note that the generated map may contain the same source and/or target files mult
 
 ### ChainedMapper
 
+The ChainedMapper chains multiple mappers together, using the target files of each mapper as the source files for the next mapper. The `src` of the ChainedMapper is used as the initial src for the first sub-mapper in the chain.
+
+If the `callback` parameter of the ChainedMapper is set, the callbacks of the chained sub-mappers will **not** be executed. Instead, only the map will be generated and the callback of the ChainedMapper will be executed. This is useful for complex mapping types that require multiple steps when generating the final mapping.
+
+If the `callback` parameter of the ChainedMapper evaluates to `False`, the ChainedMapper will yield the tasks of each sub-mapper.
+
+TODO: Examples with and without callback
 
 ## TODO
-- Support arrays of glob strings in the `src` parameter.
+- Create specific exceptions
 - Add uptodate function to mappers that returns the result of checking timstamps of each source and taregt file in the map.
+- Use [six][6] library for Python 3 compatibility
 
 [1]: http://pydoit.org/ 
 [2]: http://ant.apache.org/
 [3]: http://www.ruffus.org.uk/
 [4]: https://pathlib.readthedocs.org/
 [5]: https://docs.python.org/3/library/pathlib.html#concrete-paths
+[6]: http://pythonhosted.org/six/
