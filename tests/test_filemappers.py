@@ -21,9 +21,8 @@ def get_path_open_mock(name=""):
 # The IdentityMapper is used for many tests of BaseMapper functionality
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_identitymapper_expands_glob(mock_glob):
+def test_identitymapper_expands_glob_in_src(mock_glob):
     mapper = fm.IdentityMapper("*.foo")
-    m = mapper.get_map()
     mock_glob.assert_called_with("*.foo")
 
 def test_identitymapper_get_task_fails_if_map_is_empty():
@@ -43,53 +42,45 @@ def test_identitymapper_get_task_returns_additional_parameters():
     assert "title" in task
     assert task["title"] == "Test dummy"
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_identitymapper_input_equals_output(mock_glob):
+def test_identitymapper_input_equals_output():
     p1 = get_path_mock()
     p2 = get_path_mock()
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.IdentityMapper("*.foo")
+    mapper = fm.IdentityMapper([p1, p2])
     m = mapper.get_map()
     assert m == [(p1, p1), (p2, p2)]
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_identitymapper_get_task_returns_targets_and_callable(mock_glob):
+def test_identitymapper_get_task_returns_targets_and_callable():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.IdentityMapper("*.foo")
+    mapper = fm.IdentityMapper([p1, p2])
     t = mapper.get_task()
     assert set(t["targets"]) == set(["one.foo", "two.foo"])
     assert hasattr(t["actions"][0], "__call__")
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_identitymapper_action_is_called_for_each_target(mock_glob):
+def test_identitymapper_action_is_called_for_each_target():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
-    mock_glob.return_value = [p1, p2]
     custom_callback = mock.Mock(return_value=True)
-    mapper = fm.IdentityMapper("*.foo", custom_callback)
+    mapper = fm.IdentityMapper([p1, p2], custom_callback)
     a = mapper.get_action()
-    assert a(["one.bar"]) # targets are ignored
+    assert a(["dummy"]) # we provide one dummy target, which will be ignored
     expected = [mock.call(p1, p1), mock.call(p2, p2)]
     assert custom_callback.call_args_list == expected
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_regexmapper_replaces_placeholders(mock_glob):
+# TODO: Test path list with dir parameter - generated sources and targets should be relative to dir
+
+def test_regexmapper_replaces_placeholders():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.RegexMapper("*.foo", None, search=r"(.*)\.foo$", replace=r"\1.bar")
+    mapper = fm.RegexMapper([p1, p2], search=r"(.*)\.foo$", replace=r"\1.bar")
     t = mapper.get_task()
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_regexmapper_ignores_nonmatching(mock_glob):
+def test_regexmapper_ignores_nonmatching():
     p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.baz")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.RegexMapper(search=r"(.*)\.foo$", replace=r"\1.bar", ignore_nonmatching=True)
+    p2 = get_path_mock("two.baz")    
+    mapper = fm.RegexMapper([p1, p2], search=r"(.*)\.foo$", replace=r"\1.bar", ignore_nonmatching=True)
     t = mapper.get_task()
     assert t["targets"] == ["one.bar"]
     assert t["file_dep"] == ["one.foo"]
@@ -105,19 +96,20 @@ def test_globmapper_replaces_asterisk(mock_glob):
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_globmapper_uses_search_pattern_if_provided(mock_glob):
+def test_globmapper_uses_search_pattern_if_provided():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.GlobMapper("**/*.foo", None, "*.bar", "*.foo")
+    mapper = fm.GlobMapper([p1, p2], pattern="*.foo", replace="*.bar")
     t = mapper.get_task()
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
 def test_globmapper_raises_exception_when_pattern_contains_more_than_one_asterisk():
     with pytest.raises(RuntimeError) as e:
-        fm.GlobMapper("**/*.foo", None, "*.bar")
+        fm.GlobMapper("**/*.foo", replace="*.bar")
+    assert "asterisk" in e.value.message
+    with pytest.raises(RuntimeError) as e:
+        fm.GlobMapper(replace="*.bar", pattern="**/*.foo")
     assert "asterisk" in e.value.message
 
 def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
@@ -125,23 +117,19 @@ def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
         fm.GlobMapper("one.foo", None, "*.bar")
     assert "asterisk" in e.value.message
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_mergemapper_returns_the_same_target_for_all_sources(mock_glob):
+def test_mergemapper_returns_the_same_target_for_all_sources():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
     tgt = get_path_mock("target.dummy")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.MergeMapper("*.foo", None, tgt)
+    mapper = fm.MergeMapper([p1, p2], target=tgt)
     t = mapper.get_task()
     assert t["targets"] == ["target.dummy"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
-@mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
-def test_mergemapper_accepts_string_as_target_name(mock_glob):
+def test_mergemapper_accepts_string_as_target_name():
     p1 = get_path_mock("one.foo")
     p2 = get_path_mock("two.foo")
-    mock_glob.return_value = [p1, p2]
-    mapper = fm.MergeMapper("*.foo", None, "target.dummy")
+    mapper = fm.MergeMapper([p1, p2], target="target.dummy")
     t = mapper.get_task()
     assert t["targets"] == ["target.dummy"]
     assert t["file_dep"] == ["one.foo", "two.foo"]

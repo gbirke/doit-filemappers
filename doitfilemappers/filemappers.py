@@ -6,16 +6,20 @@ class BaseFileMapper(object):
     __metaclass__  = abc.ABCMeta
 
     def __init__(self, src="*", callback=None, **kwargs):
+        self._initialize_defaults(kwargs)
+
         self.map_initialized = False
         self.map = []
         self.src = src
         self.callback = callback
-        self.follow_symlinks = kwargs.get("follow_symlinks", True)
-        self.dir = kwargs.get("dir", ".")
-        self.file_dep = kwargs.get("file_dep", True)
-        self.allow_empty_map = kwargs.get("allow_empty_map", False)
+        
+    def _initialize_defaults(self, config):
+        self.dir = config.get("dir", pathlib.Path("."))
+        self.follow_symlinks = config.get("follow_symlinks", True)
+        self.file_dep = config.get("file_dep", True)
+        self.allow_empty_map = config.get("allow_empty_map", False)
 
-    def get_map(self, src=None):
+    def get_map(self):
         """
         Return a list of (source, target) tuples.
 
@@ -87,9 +91,38 @@ class BaseFileMapper(object):
 
     @src.setter
     def src(self, src):
-        self._src = src
+        if isinstance(src, basestring):
+            self._src = self._get_files_from_glob(src)
+            return
+        # Check if src is a list of paths
+        try:
+            self._src = [self._get_path(p) for p in src]
+        except TypeError:            
+            if isinstance(src, pathlib.Path):
+                self._src = [src]
+            else:
+                raise RuntimeError("src must be a path list, a glob expression or a Path instance!")
         self.map_initialized = False
 
+    def _get_path(self, pathname):
+        """ 
+        Create a path instance from pathname. If pathname is already a Path, return it.
+        """
+        if isinstance(pathname, pathlib.Path):
+            return pathname
+        else:
+            return pathlib.Path(pathname)
+
+    @property
+    def dir(self):
+        return self._dir
+
+    @dir.setter
+    def dir(self, new_dir):
+        if isinstance(new_dir, pathlib.Path):
+            self._dir = new_dir
+        else:
+            self._dir = pathlib.Path(new_dir)
 
 class IdentityMapper(BaseFileMapper):
     def __init__(self, src="*", callback=None, **kwargs):
@@ -97,7 +130,7 @@ class IdentityMapper(BaseFileMapper):
         self.file_dep = kwargs.get("file_dep", False)
 
     def _create_map(self, src):
-        return [(f, f) for f in self._get_files_from_glob(src)]
+        return [(f, f) for f in src]
 
 class RegexMapper(BaseFileMapper):
     def __init__(self, src="*", callback=None, search=r".*", replace=r"\0", ignore_nonmatching=True, **kwargs):
@@ -107,9 +140,10 @@ class RegexMapper(BaseFileMapper):
         self.ignore_nonmatching = ignore_nonmatching
 
     def _create_map(self, src):
-        return [(f, self._get_target_from_source(f)) for f in self._get_files_from_glob(src) if self._source_matches(f)]
+        return [(f, self._get_target_from_source(f)) for f in src if self._source_matches(f)]
 
     def _get_target_from_source(self, source):
+        """ Return a Path object for the regular expression substition of source. """
         return pathlib.Path(re.sub(self.pattern, self.replace, str(source)))
 
     def _source_matches(self, source):
@@ -123,12 +157,15 @@ class GlobMapper(RegexMapper):
     def __init__(self, src="*", callback=None, replace="*", pattern=None, **kwargs):
         if pattern:
             search = self._get_search_regex(pattern)
-        else:
+        elif isinstance(src, basestring):
             search = self._get_search_regex(src)
+        else:
+            raise RuntimeError("No valid glob search pattern found! You must either provide a glob string in src or via pattern.")
         replace_pattern = replace.replace("*", r"\1", 1)
         super(GlobMapper, self).__init__(src, callback, search, replace_pattern)
 
     def _get_search_regex(self, pattern):
+        """ Convert the glob pattern expression into a regular expression and return it. """
         cnt = pattern.count("*")
         if cnt == 0:
             raise RuntimeError("Glob pattern must contain one asterisk.")
@@ -149,14 +186,32 @@ class MergeMapper(BaseFileMapper):
             target = self.target
         else:
             raise RuntimeError("Target must be a string or Path, {} given!".format(type(self.target)))
-        return [(f, target) for f in self._get_files_from_glob(src)]
+        return [(f, target) for f in src]
+    
+    @property
+    def target(self):
+        return self._target
+
+    @target.setter
+    def target(self, new_target):
+        if isinstance(new_target, pathlib.Path):
+            self._target = new_target
+        elif new_target == None:
+            raise RuntimeError("Target must be set!")
+        else:
+            self._target = pathlib.Path(new_target)
 
 class CompositeMapper(BaseFileMapper):
     def __init__(self, sub_mappers=[], callback=None, **kwargs):
-        super(CompositeMapper, self).__init__("*", callback, **kwargs)
+        super(CompositeMapper, self).__init__(callback=callback, **kwargs)
         self.sub_mappers = sub_mappers
 
     def _create_map(self, src):
+        """ 
+        Create and return map from sub_mappers.
+
+        src is ignored.
+        """
         combined_map = []
         for sub_mapper in self.sub_mappers:
             combined_map += sub_mapper.get_map()
