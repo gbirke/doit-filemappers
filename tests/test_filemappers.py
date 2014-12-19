@@ -4,13 +4,6 @@ import mock
 import pytest
 import pathlib
 
-def get_path_mock(name=""):
-    p = mock.MagicMock(spec=pathlib.Path)
-    p.is_file.return_value = True
-    p.is_symlink.return_value = False 
-    p.__str__.return_value = name
-    return p
-
 def get_path_open_mock(name=""):
     p = mock.MagicMock(spec=pathlib.Path)
     p.__str__.return_value = name
