@@ -43,23 +43,23 @@ def test_identitymapper_get_task_returns_additional_parameters():
     assert task["title"] == "Test dummy"
 
 def test_identitymapper_input_equals_output():
-    p1 = get_path_mock()
-    p2 = get_path_mock()
+    p1 = pathlib.Path()
+    p2 = pathlib.Path()
     mapper = fm.IdentityMapper([p1, p2])
     m = mapper.get_map()
     assert m == [(p1, p1), (p2, p2)]
 
 def test_identitymapper_get_task_returns_targets_and_callable():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     mapper = fm.IdentityMapper([p1, p2])
     t = mapper.get_task()
     assert set(t["targets"]) == set(["one.foo", "two.foo"])
     assert hasattr(t["actions"][0], "__call__")
 
 def test_identitymapper_action_is_called_for_each_target():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     custom_callback = mock.Mock(return_value=True)
     mapper = fm.IdentityMapper([p1, p2], custom_callback)
     a = mapper.get_action()
@@ -67,29 +67,26 @@ def test_identitymapper_action_is_called_for_each_target():
     expected = [mock.call(p1, p1), mock.call(p2, p2)]
     assert custom_callback.call_args_list == expected
 
-# TODO: Test path list with dir parameter - generated sources and targets should be relative to dir
-
 def test_regexmapper_replaces_placeholders():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     mapper = fm.RegexMapper([p1, p2], search=r"(.*)\.foo$", replace=r"\1.bar")
     t = mapper.get_task()
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
 def test_regexmapper_ignores_nonmatching():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.baz")    
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.baz")
     mapper = fm.RegexMapper([p1, p2], search=r"(.*)\.foo$", replace=r"\1.bar", ignore_nonmatching=True)
     t = mapper.get_task()
     assert t["targets"] == ["one.bar"]
     assert t["file_dep"] == ["one.foo"]
 
-
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_globmapper_replaces_asterisk(mock_glob):
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     mock_glob.return_value = [p1, p2]
     mapper = fm.GlobMapper("*.foo", None, "*.bar")
     t = mapper.get_task()
@@ -97,12 +94,20 @@ def test_globmapper_replaces_asterisk(mock_glob):
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
 def test_globmapper_uses_search_pattern_if_provided():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     mapper = fm.GlobMapper([p1, p2], pattern="*.foo", replace="*.bar")
     t = mapper.get_task()
     assert t["targets"] == ["one.bar", "two.bar"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
+
+def test_globmapper_uses_in_path_param():
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    mapper = fm.GlobMapper([p1, p2], pattern="*.foo", replace="*.bar", in_path="subdir")
+    t = mapper.get_task()
+    assert t["targets"] == ["subdir/one.bar", "subdir/two.bar"]
+    assert t["file_dep"] == ["subdir/one.foo", "subdir/two.foo"]
 
 def test_globmapper_raises_exception_when_pattern_contains_more_than_one_asterisk():
     with pytest.raises(RuntimeError) as e:
@@ -118,17 +123,19 @@ def test_globmapper_raises_exception_when_pattern_contains_no_asterisk():
     assert "asterisk" in e.value.message
 
 def test_mergemapper_returns_the_same_target_for_all_sources():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
-    tgt = get_path_mock("target.dummy")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    tgt = pathlib.Path("target.dummy")
     mapper = fm.MergeMapper([p1, p2], target=tgt)
     t = mapper.get_task()
     assert t["targets"] == ["target.dummy"]
     assert t["file_dep"] == ["one.foo", "two.foo"]
 
 def test_mergemapper_accepts_string_as_target_name():
-    p1 = get_path_mock("one.foo")
-    p2 = get_path_mock("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
     mapper = fm.MergeMapper([p1, p2], target="target.dummy")
     t = mapper.get_task()
     assert t["targets"] == ["target.dummy"]
@@ -142,10 +149,10 @@ def test_mergemapper_raises_exception_without_target():
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_compositemapper_collects_from_all_sub_mappers(mock_glob):
-    s1 = get_path_mock("one.foo")
-    s2 = get_path_mock("two.foo")
-    t1 = get_path_mock("one.bar")
-    t2 = get_path_mock("two.bar")
+    s1 = pathlib.Path("one.foo")
+    s2 = pathlib.Path("two.foo")
+    t1 = pathlib.Path("one.bar")
+    t2 = pathlib.Path("two.bar")
     # Mock GlobMappers
     glob_mapper1 = mock.MagicMock()
     glob_mapper1.get_map.return_value = [(s1, t1)]

@@ -44,9 +44,8 @@ mapper.get_task({"basename":"foo"})
 The following parameters are common for all mappers
 - `src`: Designate which source files should be selected. This can either be a glob string that can be used by [`pathlib.Path.glob`][4] or a list of Path instances. Defaults to all files (`*`).
 - `callback`: A callable with `input_file`, `output_file` parameters.
-- `dir`: Operating directory. The glob expression / Path items  in `src` will be evaluated in the context of this path. If `dir` is absolute, the generated targets will be absolute too. Otherwise they will be relative. Defaults to `.` (current directory).
+- `in_path`: Operating directory. The glob expression / Path items  in `src` will be evaluated in the context of this path. If `in_path` is absolute, the generated targets will be absolute too. Otherwise they will be relative. Defaults to `.` (current directory).
 - `file_dep`: If true, `get_task` creates `file_dep` with the source files from the mapper. For most mappers it is true.
-- `follow_symlinks`: If set to false, only files are mapped. Defaults to true.
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
 
 ### Multiple dependent mappers

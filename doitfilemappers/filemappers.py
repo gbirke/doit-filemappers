@@ -14,8 +14,7 @@ class BaseFileMapper(object):
         self.callback = callback
         
     def _initialize_defaults(self, config):
-        self.dir = config.get("dir", pathlib.Path("."))
-        self.follow_symlinks = config.get("follow_symlinks", True)
+        self.in_path = config.get("in_path", pathlib.Path("."))
         self.file_dep = config.get("file_dep", True)
         self.allow_empty_map = config.get("allow_empty_map", False)
 
@@ -70,21 +69,6 @@ class BaseFileMapper(object):
             task["actions"] = [lambda targets: True]
         return task
 
-    def _get_files_from_glob(self, src):
-        """ 
-        Get a list of files from the glob expression in src.
-
-        If self.follow_symlinks is false, symlinks will be ignored, 
-        otherwise smylinks to files will be returned.
-        """
-        return [p for p in pathlib.Path(self.dir).glob(src) if self._is_file_or_symlink(p)]
-
-    def _is_file_or_symlink(self, f):
-        if not self.follow_symlinks and f.is_symlink():
-            return False
-        else:
-            return f.is_file()
-
     @property
     def src(self):
         return self._src
@@ -92,37 +76,28 @@ class BaseFileMapper(object):
     @src.setter
     def src(self, src):
         if isinstance(src, basestring):
-            self._src = self._get_files_from_glob(src)
+            self._src = list(pathlib.Path(self.in_path).glob(src))
             return
         # Check if src is a list of paths
         try:
-            self._src = [self._get_path(p) for p in src]
-        except TypeError:            
+            self._src = [self.in_path / p for p in src]
+        except TypeError:
             if isinstance(src, pathlib.Path):
-                self._src = [src]
+                self._src = [self.in_path / src]
             else:
                 raise RuntimeError("src must be a path list, a glob expression or a Path instance!")
         self.map_initialized = False
 
-    def _get_path(self, pathname):
-        """ 
-        Create a path instance from pathname. If pathname is already a Path, return it.
-        """
-        if isinstance(pathname, pathlib.Path):
-            return pathname
-        else:
-            return pathlib.Path(pathname)
-
     @property
-    def dir(self):
-        return self._dir
+    def in_path(self):
+        return self._in_path
 
-    @dir.setter
-    def dir(self, new_dir):
-        if isinstance(new_dir, pathlib.Path):
-            self._dir = new_dir
+    @in_path.setter
+    def in_path(self, path):
+        if isinstance(path, pathlib.Path):
+            self._in_path = path
         else:
-            self._dir = pathlib.Path(new_dir)
+            self._in_path = pathlib.Path(path)
 
 class IdentityMapper(BaseFileMapper):
     def __init__(self, src="*", callback=None, **kwargs):
@@ -162,7 +137,7 @@ class GlobMapper(RegexMapper):
         else:
             raise RuntimeError("No valid glob search pattern found! You must either provide a glob string in src or via pattern.")
         replace_pattern = replace.replace("*", r"\1", 1)
-        super(GlobMapper, self).__init__(src, callback, search, replace_pattern)
+        super(GlobMapper, self).__init__(src, callback, search, replace_pattern, **kwargs)
 
     def _get_search_regex(self, pattern):
         """ Convert the glob pattern expression into a regular expression and return it. """
