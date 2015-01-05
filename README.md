@@ -262,6 +262,34 @@ def cleanup_file_names():
 ```
 
 
+## Creating your own mappers
+
+Creating your own mappers is easy - just subclass `BaseMapper` and implement the `_create_map` method:
+
+```python
+class LowercaseMapper(BaseMapper):
+    def _create_map(self, src):
+        return [(s, str(s).lower()) for s in src]
+```
+
+The `src` parameter is always a list of `Path` objects.
+
+If you need additional parameters or different parameter defaults, you have to overwrite the `__init__` method:
+
+```python
+class LowercaseMapper(BaseMapper):
+    def __init__(self, src, callback, file_dep=False, **kwargs):
+        super(LowercaseMapper, self).__init__(
+            src, 
+            callback, 
+            file_dep=file_dep,
+            **kwargs
+        )
+
+    def _create_map(self, src):
+        return [(s, str(s).lower()) for s in src]
+```
+
 ## TODO
 - Create specific exceptions
 - Add uptodate function to mappers that returns the result of checking timstamps of each source and target file in the map.
