@@ -156,6 +156,31 @@ def test_compositemapper_collects_from_all_sub_mappers(mock_glob):
     assert set(t["targets"]) == set(["one.bar","two.bar"])
     assert set(t["file_dep"]) == set(["one.foo","two.foo"])
 
+def test_chainmapper_yields_for_all_subtasks():
+    m1 = mock.Mock()
+    m1.get_task.return_value = {"actions":["touch foo"], "targets":["foo"]}
+    m2 = mock.Mock()
+    m2.get_task.return_value = {"actions":["touch bar"], "targets":["bar"]}
+    mapper = fm.ChainedMapper(sub_mappers=[m1, m2])
+    tasks = list(mapper.get_task())
+    assert tasks == [
+        {"actions":["touch foo"], "targets":["foo"]},
+        {"actions":["touch bar"], "targets":["bar"]}
+    ]
+    # check if chainmapper sets src from targets of previous tasks
+    assert m2.src == ["foo"]
+
+def test_chainmapper_calls_first_subtask_with_src_from_chainmapper():
+    p1 = pathlib.Path("one.foo")
+    m1 = mock.Mock()
+    m1.get_task.return_value = {"actions":["touch foo"], "targets":["foo"]}
+    src = [p1]
+    mapper = fm.ChainedMapper(src, sub_mappers=[m1])
+    list(mapper.get_task())
+    assert m1.src == src
+
+# TODO test_chainmapper_returns_combined_map_if_callback_is_given
+
 def test_file_handle_decorator_opens_files():
     @fm.open_files
     def check(_in, _out):

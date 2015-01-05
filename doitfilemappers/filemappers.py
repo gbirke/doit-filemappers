@@ -192,6 +192,38 @@ class CompositeMapper(BaseFileMapper):
             combined_map += sub_mapper.get_map()
         return combined_map
 
+class ChainedMapper(BaseFileMapper):
+    def __init__(self, src="*", sub_mappers=[], callback=None, **kwargs):
+        super(ChainedMapper, self).__init__(src, callback, **kwargs)
+        self.sub_mappers = sub_mappers
+
+    def _create_map(self, src):
+        for m in self.sub_mappers:
+            m.src = src
+            file_map = m.get_map()
+            if not file_map:
+                if self.allow_empty_map:
+                    return self._get_task_for_empty_map(task)
+                else:
+                    raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
+            sources, targets = zip(*file_map)
+            src = list(set([str(t) for t in targets]))
+        return file_map
+
+    def get_task(self):
+        if self.callback == None:
+            src = self.src
+            for mapper in self.sub_mappers:
+                mapper.src = src
+                task = mapper.get_task()
+                src = task["targets"]
+                yield task
+        else:
+            pass
+            # TODO create map and yield single action
+
+
+
 def open_files(func, in_mode="r", out_mode="w"):
     """ Open files for callback """
     def file_opener(_in, _out, *args, **kwargs):
