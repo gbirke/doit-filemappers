@@ -145,13 +145,13 @@ def task_move_files():
     return mapper.get_task()
 ```
 
-RegexMapper has the parameter `ignore_nonmatching`. If set to `False`, the map will contain files that do not match the search expression. 
+RegexMapper has the parameter `ignore_nonmatching` which is `True` by default. If set to `False`, the map will contain files that do not match the search expression. You should set `ignore_nonmatching` to `False` in this case to avoid errors.
 
 ```python
 def task_process_text():
     """ 
-    Process all files and output files named "Foo_Bar.txt" as "Bar-Foo.txt".
-    All other files will keep their name.
+    Process only CSV and text files.
+    All other files will keep their name and show up unchanged in the targets list.
     """
     def process_text(_in, _out):
         if _in.suffix() == ".txt":
@@ -160,12 +160,24 @@ def task_process_text():
             # process CSV file
 
     mapper = RegexMapper("*", process_text, 
-        search=r"^(\w+)_(\w+)(\.txt)", 
-        replace=r"\2-\1\3", 
-        ignore_nonmatching=True, 
+        search=r"^(.*)\.(txt|csv)$",
+        replace=r"\1-processed.\3",
+        ignore_nonmatching=False,
         file_dep=False
     )
     return mapper.get_task()
+```
+
+You can set all the usual regex flags by using the `flags` parameter:
+
+```python
+import re
+# match TXT and txt files
+mapper = RegexMapper("*", shutils.move,
+    search=r"^(.*)\.txt",
+    replace=r"\1-processed.txt",
+    flags=re.IGNORECASE
+)
 ```
 
 **Warning:** Some patterns will create the same target name for different source names which may lead to overwriting the target. If you want to append instead, use `@open_files_with_merge`.

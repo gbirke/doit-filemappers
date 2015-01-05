@@ -108,9 +108,9 @@ class IdentityMapper(BaseFileMapper):
         return [(f, f) for f in src]
 
 class RegexMapper(BaseFileMapper):
-    def __init__(self, src="*", callback=None, search=r".*", replace=r"\0", ignore_nonmatching=True, **kwargs):
+    def __init__(self, src="*", callback=None, search=r".*", replace=r"\0",flags=0, ignore_nonmatching=True, **kwargs):
         super(RegexMapper, self).__init__(src, callback, **kwargs)
-        self.pattern = re.compile(search)
+        self.pattern = re.compile(search, flags)
         self.replace = replace
         self.ignore_nonmatching = ignore_nonmatching
 
