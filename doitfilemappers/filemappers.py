@@ -77,6 +77,7 @@ class BaseFileMapper(object):
     def src(self, src):
         if isinstance(src, basestring):
             self._src = list(pathlib.Path(self.in_path).glob(src))
+            self.map_initialized = False
             return
         # Check if src is a list of paths
         try:
@@ -198,6 +199,7 @@ class ChainedMapper(BaseFileMapper):
         self.sub_mappers = sub_mappers
 
     def _create_map(self, src):
+        start_source = None
         for m in self.sub_mappers:
             m.src = src
             file_map = m.get_map()
@@ -208,20 +210,21 @@ class ChainedMapper(BaseFileMapper):
                     raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
             sources, targets = zip(*file_map)
             src = list(set([str(t) for t in targets]))
-        return file_map
+            if not start_source:
+                start_source = sources
+        sources, targets = zip(*file_map)
+        return zip(start_source, targets)
 
-    def get_task(self):
+    def get_task(self, task={}):
         if self.callback == None:
             src = self.src
             for mapper in self.sub_mappers:
                 mapper.src = src
-                task = mapper.get_task()
+                task = mapper.get_task(task)
                 src = task["targets"]
                 yield task
         else:
-            pass
-            # TODO create map and yield single action
-
+            yield super(ChainedMapper, self).get_task(task)
 
 
 def open_files(func, in_mode="r", out_mode="w"):

@@ -179,7 +179,18 @@ def test_chainmapper_calls_first_subtask_with_src_from_chainmapper():
     list(mapper.get_task())
     assert m1.src == src
 
-# TODO test_chainmapper_returns_combined_map_if_callback_is_given
+def test_chainmapper_returns_combined_map_if_callback_is_given():
+    m1 = mock.Mock()
+    m1.get_map.return_value = [["start", "foo"]]
+    m2 = mock.Mock()
+    m2.get_map.return_value = [["foo", "bar"]]
+    callback_func = mock.Mock()
+    mapper = fm.ChainedMapper(src="start", sub_mappers=[m1, m2], callback=callback_func)
+    tasks = list(mapper.get_task())
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["targets"] == ["bar"]
+    assert task["file_dep"] == ["start"]
 
 def test_file_handle_decorator_opens_files():
     @fm.open_files

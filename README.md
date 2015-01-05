@@ -151,7 +151,8 @@ RegexMapper has the parameter `ignore_nonmatching` which is `True` by default. I
 def task_process_text():
     """ 
     Process only CSV and text files.
-    All other files will keep their name and show up unchanged in the targets list.
+    All other files will keep their name and show up unchanged
+    in the targets list.
     """
     def process_text(_in, _out):
         if _in.suffix() == ".txt":
@@ -218,14 +219,48 @@ The example shows that you can omit the `callback` parameter for the sub-mappers
 Note that the generated map may contain the same source and/or target files multiple times. You must then write your callback in way that can avoids processing the same source file multiple times or overwriting the same target file.
 
 ### ChainedMapper
-
 The ChainedMapper chains multiple mappers together, using the target files of each mapper as the source files for the next mapper. The `src` of the ChainedMapper is used as the initial `src` for the first sub-mapper in the chain.
 
-If the `callback` parameter of the ChainedMapper is set, the callbacks of the chained sub-mappers will **not** be executed. Instead, only the map will be generated and the callback of the ChainedMapper will be executed. This is useful for complex mapping types that require multiple steps when generating the final mapping.
+If you want each action of the sub-mappers executed, you must leave the `callback` parameters of ChainedMapper empty:
 
-If the `callback` parameter of the ChainedMapper evaluates to `False`, the ChainedMapper will yield the tasks of each sub-mapper.
+```python
+import shutils
 
-TODO: Examples with and without callback
+def task_convert_images():
+    def convert_img(image_in, image_out):
+        # do some processing here
+    # src param ("*") in the following mappers is just a dummy and will
+    # be overwritten by the ChainedMapper
+    my_sub_mappers = [
+        # Remove non-alphanumeric chars in file name
+        RegexMapper("*", shutils.move, r"[^\w_]", r"_",
+            ignore_nonmatching=False),
+        # Restore the suffix (dot was replaced be previous step)
+        RegexMapper("*", shutils.move, r"_jpg$", r".jpg"),
+        #  Create Thumbnails
+        GlobMapper("*", convert_img, replace="*_thumb.jpg", "*.jpg")
+    ]
+    mapper = ChainedMapper("*.jpg", sub_mappers=my_sub_mappers)
+    return mapper.get_task()
+```
+
+If the `callback` parameter of the ChainedMapper is set, the callbacks of the chained sub-mappers will **not** be executed. Instead, only the map will be generated and the callback of the ChainedMapper will be executed. This is useful for complex mapping types that require multiple steps when generating the final mapping. The generated `file_dep` will be the source files of the *first* sub-mapper.
+
+```python
+import shutils
+
+def cleanup_file_names():
+    # src param is left out since it will be overwritten by ChainedMapper
+    # callback param is left out since it won't be called.
+    my_sub_mappers = [
+        RegexMapper(search=r"[^\w_]", replace=r"_", ignore_nonmatching=False)
+        RegexMapper(search=r"^_", replace=r"", ignore_nonmatching=False)
+        RegexMapper(search=r"_jpg$", replace=r".jpg")
+    ]
+    mapper = ChainedMapper("*.jpg", shutils.move, sub_mappers=my_sub_mappers)
+    return mapper.get_task()
+```
+
 
 ## TODO
 - Create specific exceptions
