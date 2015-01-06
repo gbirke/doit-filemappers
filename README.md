@@ -48,8 +48,32 @@ The following parameters are common for all mappers
 - `file_dep`: If true, `get_task` creates a `file_dep` key with the source files from the mapper. For most mappers it is true.
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
 
+All parameters have default values and can be left out.
+
 ### Multiple dependent mappers
 If you are building a chain of mappers where the output files (targets) of one processing step become the input (sources) of the next step, you can't use a glob expression for the `src` parameter after the first because the files don't exist yet. Instead, you must set the `src` of each task after the first to the `target` output of the preceding task. The ChainedMapper (see below) does that for you.
+
+### Using the map without creating a task
+If you just want to use the file mapping, call the `get_map` method of the mapper. It will return a list of tuples where the first item of each tuple is the source file and the second item of each tuple is the target.
+
+```python
+mapper = GlobMapper("*.jpg", replace="*.png")
+jpg2png_map = mapper.get_map()
+for m in jpg2png_map:
+    source = m[0]
+    target = m[1]
+    print "{} -> {}".format(source, target)
+```
+
+If you're interested in separating source and target lists, use the `zip` function:
+
+```python
+mapper = GlobMapper("*.jpg", replace="*.png")
+jpg2png_map = mapper.get_map()
+sources, targets = zip(*jpg2png_map)
+print "List of targets:"
+print "\n".join(targets)
+```
 
 ### Using mappers with commandline tasks
 
@@ -267,16 +291,20 @@ def cleanup_file_names():
 Creating your own mappers is easy - just subclass `BaseMapper` and implement the `_create_map` method:
 
 ```python
+import pathlib
+
 class LowercaseMapper(BaseMapper):
     def _create_map(self, src):
-        return [(s, str(s).lower()) for s in src]
+        return [(s, pathlib.Path(str(s).lower())) for s in src]
 ```
 
-The `src` parameter is always a list of `Path` objects.
+The `src` parameter is always a list of `Path` objects. `_create_map` must return a list of tuples where the first item of each tuple is the source file and the second item of each tuple is the target file. Both items must be `Path` instances.
 
 If you need additional parameters or different parameter defaults, you have to overwrite the `__init__` method:
 
 ```python
+import pathlib
+
 class LowercaseMapper(BaseMapper):
     def __init__(self, src, callback, file_dep=False, **kwargs):
         super(LowercaseMapper, self).__init__(
@@ -287,7 +315,7 @@ class LowercaseMapper(BaseMapper):
         )
 
     def _create_map(self, src):
-        return [(s, str(s).lower()) for s in src]
+        return [(s, pathlib.Path(str(s).lower())) for s in src]
 ```
 
 ## TODO
