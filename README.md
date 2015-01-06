@@ -43,7 +43,7 @@ mapper.get_task({"basename":"foo"})
 ### Mapper constructor parameters
 The following parameters are common for all mappers
 - `src`: Designate which source files should be selected. This can either be a glob string that can be used by [`pathlib.Path.glob`][4] or a list of Path instances. Defaults to all files (`*`).
-- `callback`: A callable with `input_file`, `output_file` parameters.
+- `callback`: A callable with `input_file`, `output_file` parameters. For command line tasks this can also be a string with `%(source)s` and `%(target)s` placeholders.
 - `in_path`: Operating directory. The glob expression / Path items  in `src` will be evaluated in the context of this path. If `in_path` is absolute, the generated targets will be absolute too. Otherwise they will be relative. Defaults to `.` (current directory).
 - `file_dep`: If true, `get_task` creates a `file_dep` key with the source files from the mapper. For most mappers it is true.
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
@@ -77,7 +77,30 @@ print "\n".join(targets)
 
 ### Using mappers with commandline tasks
 
-TODO
+If you want to execute a command for every source/target file pair, use a string with placeholders as the callback parameter:
+
+```python
+def task_switch_pet():
+    cmd = "sed s/dog/cat/ %(source)s > %(target)s"
+    mapper = GlobMapper("*_dogs.csv", callback=cmd, replace="*_cats.csv")
+    return mapper.get_task()
+```
+
+If you want to use the whole list of source or target files, your must build the action yourself:
+
+```python
+
+def task_combine_oo_files_except_moo():
+    mapper = RegexMapper(search=r"^[^m]oo$")
+    oo_map = mapper.get_map()
+    sources, targets = zip(*oo_map)
+    return {
+        'actions': ["cat %s > no_moo" % " ".join(targets)],
+        'targets': targets
+    }
+```
+
+This example is a bit contrived because most of the time you'd rather use a command line glob instead of a FileMapper class.
 
 ### Decorators for your callback function
 

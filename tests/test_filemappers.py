@@ -55,7 +55,7 @@ def test_identitymapper_action_is_called_for_each_target():
     p2 = pathlib.Path("two.foo")
     custom_callback = mock.Mock(return_value=True)
     mapper = fm.IdentityMapper([p1, p2], custom_callback)
-    a = mapper.get_action()
+    a = mapper.get_action(mapper.callback)
     assert a(["dummy"]) # we provide one dummy target, which will be ignored
     expected = [mock.call(p1, p1), mock.call(p2, p2)]
     assert custom_callback.call_args_list == expected
@@ -75,6 +75,13 @@ def test_regexmapper_ignores_nonmatching():
     t = mapper.get_task()
     assert t["targets"] == ["one.bar"]
     assert t["file_dep"] == ["one.foo"]
+
+def test_regexmapper_generates_cmd_actions_from_string_callback():
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    mapper = fm.RegexMapper([p1, p2], callback="mv %(source)s %(target)s", search=r"(.*)\.foo$", replace=r"\1.bar")
+    t = mapper.get_task()
+    assert t["actions"] == ["mv one.foo one.bar", "mv two.foo two.bar"]
 
 @mock.patch('doitfilemappers.filemappers.pathlib.Path.glob')
 def test_globmapper_replaces_asterisk(mock_glob):

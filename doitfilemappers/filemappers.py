@@ -33,20 +33,28 @@ class BaseFileMapper(object):
     def _create_map(self, src):
         """ Create the mapping that specific for this mapping class. """
 
-    def get_action(self):
+    def get_action(self, callback):
         """
         Return a function that iterates over the map, calling the callback.
 
         The `targets` parameter of the generated function is ignored.
         """
         file_map = self.get_map()
-        callback = self.callback
         def task_action(targets):
             ok = True
             for source, target in file_map:
                 ok &= callback(source, target)
             return ok
         return task_action
+
+    def get_cmd_action(self, cmd):
+        """
+        Return a list of commands that can be used as action for a task.
+
+        Placeholders `%%(target)s` and `%%(source)s` in the `cmd` parameter will be replaced.
+        """
+        file_map = self.get_map()
+        return [cmd % {'source':m[0], "target":m[1]} for m in file_map]
 
     def get_task(self, task={}):
         """ Get a task dictionary for DoIt. """
@@ -58,7 +66,16 @@ class BaseFileMapper(object):
                 raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
         sources, targets = zip(*file_map)
         task["targets"] = list(set([str(t) for t in targets]))
-        task["actions"]  = [self.get_action()]
+
+        callback = self.callback
+        if callback == None:
+            if "action" in task:
+                callback = task["action"]
+        if hasattr(callback, "__call__"):
+            task["actions"] = [self.get_action(callback)]
+        elif callback:
+            task["actions"] = self.get_cmd_action(callback)
+
         if self.file_dep:
             task["file_dep"] = [str(s) for s in sources]
         return task
