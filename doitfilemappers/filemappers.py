@@ -156,12 +156,7 @@ class MergeMapper(BaseFileMapper):
         self.target = target
 
     def _create_map(self, src):
-        if isinstance(self.target, basestring) and self.target:
-            target = pathlib.Path(self.target)
-        elif isinstance(self.target, pathlib.Path):
-            target = self.target
-        else:
-            raise RuntimeError("Target must be a string or Path, {} given!".format(type(self.target)))
+        target = self.target
         return [(f, target) for f in src]
     
     @property
