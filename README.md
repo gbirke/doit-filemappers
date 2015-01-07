@@ -185,11 +185,12 @@ If a single asterisk is not sufficient for your replacement needs, use `RegexMap
 The RegexMapper uses a regular expression to allow for more complex filename transformations.
 
 ```python
-import shutil
+def rename_file(_in, _out):
+        _in.replace(_out)
 
 def task_move_files():
     """ Rename files named like "Foo_Bar.txt" to "Bar-Foo.txt" """
-    mapper = RegexMapper("*.txt", shutil.move, r"^(\w+)_(\w+)", r"\2-\1")
+    mapper = RegexMapper("*.txt", rename_file, r"^(\w+)_(\w+)", r"\2-\1")
     return mapper.get_task()
 ```
 
@@ -197,11 +198,10 @@ You can set all the usual regular expression flags by using the `flags` paramete
 
 ```python
 import re
-import shutil
 
 def task_move_files():
     # match TXT and txt files
-    mapper = RegexMapper("*", shutil.move,
+    mapper = RegexMapper("*", rename_file
         search=r"^(.*)\.txt",
         replace=r"\1-processed.txt",
         flags=re.IGNORECASE
@@ -276,7 +276,8 @@ The ChainedMapper chains multiple mappers together, using the target files of ea
 If you want each action of the sub-mappers executed, you must leave the `callback` parameters of ChainedMapper empty:
 
 ```python
-import shutil
+def rename_file(_in, _out):
+        _in.replace(_out)
 
 def task_convert_images():
     def convert_img(image_in, image_out):
@@ -285,10 +286,10 @@ def task_convert_images():
     # be overwritten by the ChainedMapper
     my_sub_mappers = [
         # Remove non-alphanumeric chars in file name
-        RegexMapper("*", shutil.move, r"[^\w_]", r"_",
+        RegexMapper("*", rename_file, r"[^\w_]", r"_",
             ignore_nonmatching=False),
         # Restore the suffix (dot was replaced be previous step)
-        RegexMapper("*", shutil.move, r"_jpg$", r".jpg"),
+        RegexMapper("*", rename_file, r"_jpg$", r".jpg"),
         #  Create Thumbnails
         GlobMapper("*", convert_img, replace="*_thumb.jpg", "*.jpg")
     ]
@@ -299,8 +300,6 @@ def task_convert_images():
 If the `callback` parameter of the ChainedMapper is set, the callbacks of the chained sub-mappers will _not_ be executed. Instead, only the map will be generated and the callback of the ChainedMapper will be executed. This is useful for complex mapping types that require multiple steps when generating the final mapping. The generated `file_dep` will be the source files of the _first_ sub-mapper.
 
 ```python
-import shutil
-
 def cleanup_file_names():
     # src param is left out since it will be overwritten by ChainedMapper
     # callback param is left out since it won't be called.
@@ -309,7 +308,7 @@ def cleanup_file_names():
         RegexMapper(search=r"^_", replace=r"", ignore_nonmatching=False)
         RegexMapper(search=r"_jpg$", replace=r".jpg")
     ]
-    mapper = ChainedMapper("*.jpg", shutil.move, sub_mappers=my_sub_mappers)
+    mapper = ChainedMapper("*.jpg", rename_file, sub_mappers=my_sub_mappers)
     return mapper.get_task()
 ```
 
