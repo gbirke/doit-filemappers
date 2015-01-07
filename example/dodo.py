@@ -1,26 +1,25 @@
+import doitfilemappers.filemappers as fm
 import shutil
-from filesets import *
 
-def task_step1():
+def rename_file(_in, _out):
+    shutil.move(str(_in), str(_out))
 
-    def process_file(out_file):
-        print "processing {} ...".format(out_file)
+def copy_file(_in, _out):
+    shutil.copy(str(_in), str(_out))
 
-    fs = SourceFileset("work/*.txt")
+def task_create_build_dir():
     return {
-        "actions": [fs.get_action(process_file)],
-        "targets": fs.get_targets()
+        "actions": ["mkdir build"],
+        "targets": ["build"],
+        "clean": ["rm -rf build"]
     }
 
-def task_step2():
-
-    def copy_file(in_file, out_file):
-        shutil.copyfile(in_file, out_file)
-
-    fs = TransformFileset("work/*.txt", r"(.*)\.txt$", r"\1.bak")
-    return {
-        "actions": [fs.get_action(copy_file)],
-        "file_dep": fs.get_file_dep(),
-        "targets":  fs.get_targets()
-    }    
-    
+def task_convert_files():
+    sub_mappers = [
+        # Copy files
+        fm.GlobMapper("*", copy_file, "build/*.txt", "src/*.txt"),
+        # Rename lingering file
+        fm.RegexMapper("*", rename_file, search="foo.txt", replace="foo3.txt", dir="build", file_dep=False),
+    ]
+    mapper = fm.ChainedMapper("src/*.txt", sub_mappers)
+    return mapper.get_task()
