@@ -51,6 +51,9 @@ The following parameters are common for all mappers
 
 All parameters have default values and can be left out.
 
+### Callback return value
+By default DoIt execution will stop when a task returns `False`. If your `callback` function returns `False` for a source/target pair, the generated action will also return `False`. However, all source/target pairs will be iterated. If you want to stop at an error immediately, you must raise an exception.
+
 ### Multiple dependent mappers
 If you are building a chain of mappers where the output files (targets) of one processing step become the input (sources) of the next step, you can't use a glob expression for the `src` parameter in the following mappers after the first because the files don't exist yet. Instead, you must set the `src` of each task after the first to the `target` output of the preceding task. The ChainedMapper (see below) does that for you.
 

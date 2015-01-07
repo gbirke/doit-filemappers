@@ -44,7 +44,8 @@ class BaseFileMapper(object):
         def task_action(targets):
             ok = True
             for source, target in file_map:
-                ok &= callback(source, target)
+                if callback(source, target) == False:
+                    ok = False
             return ok
         return task_action
 
