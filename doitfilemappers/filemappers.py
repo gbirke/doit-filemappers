@@ -1,6 +1,7 @@
 import pathlib
 import re
 import abc
+from collections import defaultdict
 
 class BaseFileMapper(object):
     __metaclass__  = abc.ABCMeta
@@ -230,13 +231,23 @@ class ChainedMapper(BaseFileMapper):
     def get_task(self, task={}):
         if self.callback == None:
             src = self.src
+            self.map_counters = defaultdict(lambda: 0)
             for mapper in self.sub_mappers:
                 mapper.src = src
-                task = mapper.get_task(task)
-                src = task["targets"]
-                yield task
+                sub_task = mapper.get_task(task)
+                src = sub_task["targets"]
+                sub_task["name"] = self._get_taskname(mapper, task)
+                yield sub_task
         else:
-            yield super(ChainedMapper, self).get_task(task)
+            task = super(ChainedMapper, self).get_task(task)
+            task["name"] = "chained_map"
+            yield
+
+    def _get_taskname(self, mapper, task):
+        classname = type(mapper).__name__
+        self.map_counters[classname] += 1
+        suffix = self.map_counters[classname]
+        return "{}{}".format(classname, suffix)
 
 
 def open_files(func, in_mode="r", out_mode="w"):
