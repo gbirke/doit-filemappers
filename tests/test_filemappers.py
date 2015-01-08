@@ -171,8 +171,8 @@ def test_chainmapper_yields_for_all_subtasks():
     mapper = fm.ChainedMapper(sub_mappers=[m1, m2])
     tasks = list(mapper.get_task())
     assert tasks == [
-        {"actions":["touch foo"], "targets":["foo"]},
-        {"actions":["touch bar"], "targets":["bar"]}
+        {"actions":["touch foo"], "targets":["foo"], "name":"Mock1"},
+        {"actions":["touch bar"], "targets":["bar"], "name":"Mock2"}
     ]
     # check if chainmapper sets src from targets of previous tasks
     assert m2.src == ["foo"]
@@ -188,9 +188,9 @@ def test_chainmapper_calls_first_subtask_with_src_from_chainmapper():
 
 def test_chainmapper_returns_combined_map_if_callback_is_given():
     m1 = mock.Mock()
-    m1.get_map.return_value = [["start", "foo"]]
+    m1.get_map.return_value = [("start", "foo")]
     m2 = mock.Mock()
-    m2.get_map.return_value = [["foo", "bar"]]
+    m2.get_map.return_value = [("foo", "bar")]
     callback_func = mock.Mock()
     mapper = fm.ChainedMapper(src="start", sub_mappers=[m1, m2], callback=callback_func)
     tasks = list(mapper.get_task())

@@ -224,9 +224,8 @@ class ChainedMapper(BaseFileMapper):
                     raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
             sources, targets = zip(*file_map)
             src = list(set([str(t) for t in targets]))
-            if not start_source:
+            if start_source == None:
                 start_source = sources
-        sources, targets = zip(*file_map)
         return zip(start_source, targets)
 
     def get_task(self, task={}):
@@ -242,7 +241,7 @@ class ChainedMapper(BaseFileMapper):
         else:
             task = super(ChainedMapper, self).get_task(task)
             task["name"] = "chained_map"
-            yield
+            yield task
 
     def _get_taskname(self, mapper, task):
         classname = type(mapper).__name__
