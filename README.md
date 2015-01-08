@@ -35,12 +35,6 @@ The `get_task` method of the mapper will return the task dictionary with the ` a
 
 The callback you provide to the mapper must alwways have two parameters - one for the source file and one for target file. Both paramters will be [`pathlib.Path`][5] instances. The callback will be called for every source/target pair of the mapper and _ignore_ the targets provided by DoIt.
 
-If you want to have additional keys in the task dictionary, e.g. `uptodate`, `basename`, `title`, etc., you can provide them as a parameter to `get_task`. All dictionary values except for `actions`, `targets` and `file_dep` will be left unchanged.
-
-```python
-return mapper.get_task({"basename":"foo"})
-```
-
 ### Mapper constructor parameters
 The following parameters are common for all mappers
 - `src`: Designate which source files should be selected. This can either be a glob string that can be used by [`pathlib.Path.glob`][4] or a list of Path instances. Defaults to all files (`*`).
@@ -50,6 +44,18 @@ The following parameters are common for all mappers
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
 
 All parameters have default values and can be left out.
+
+### Additional task parameters
+If you want to have additional keys in the task dictionary returned by `get_task`, e.g. `uptodate`, `basename`, `title`, etc., you can provide them as a parameter to `get_task` or to the mapper constructor. All dictionary values except for `actions`, `targets` and `file_dep` will be left unchanged.
+
+```python
+mapper = GlobMapper("*_foo.txt", process_file, "*bar.txt",
+    task={"basename":"foo", "uptodate":False}
+)
+return mapper.get_task({"basename":"bar"}) # "bar" will override "foo"
+```
+
+Using the task constructor parameter is important for chained tasks (see below) where you can't access the returned task directly.
 
 ### Callback return value
 By default DoIt execution will stop when a task returns `False`. If your `callback` function returns `False` for a source/target pair, the generated action will also return `False`. However, all source/target pairs will be iterated. If you want to stop at an error immediately, you must raise an exception.

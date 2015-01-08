@@ -18,6 +18,7 @@ class BaseFileMapper(object):
         self.in_path = config.get("in_path", pathlib.Path("."))
         self.file_dep = config.get("file_dep", True)
         self.allow_empty_map = config.get("allow_empty_map", False)
+        self.task = config.get("task", {})
 
     def get_map(self):
         """
@@ -67,6 +68,7 @@ class BaseFileMapper(object):
             else:
                 raise RuntimeError("The generated map is empty. Please check your mapper parameters.")
         sources, targets = zip(*file_map)
+        task = self._get_task_data(task)
         task["targets"] = list(set([str(t) for t in targets]))
 
         callback = self.callback
@@ -80,6 +82,13 @@ class BaseFileMapper(object):
 
         if self.file_dep:
             task["file_dep"] = [str(s) for s in sources]
+        return task
+
+    def _get_task_data(self, p_task):
+        """ Collect task data from parameter task, and self.task and return it. """
+        task = {}
+        task.update(self.task)
+        task.update(p_task)
         return task
 
     def _get_task_for_empty_map(self, task):
