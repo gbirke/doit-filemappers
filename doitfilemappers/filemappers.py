@@ -19,6 +19,7 @@ class BaseFileMapper(object):
         self.file_dep = config.get("file_dep", True)
         self.allow_empty_map = config.get("allow_empty_map", False)
         self.task = config.get("task", {})
+        self.error_handling = config.get("error_handling", ((Exception), self._handle_exception ))
 
     def get_map(self):
         """
@@ -42,11 +43,20 @@ class BaseFileMapper(object):
         The `targets` parameter of the generated function is ignored.
         """
         file_map = self.get_map()
+
+        def ok_value(v, ok):
+            if v == False or ok == False:
+                return False
+            else:
+                return True
+
         def task_action(targets):
             ok = True
             for source, target in file_map:
-                if callback(source, target) == False:
-                    ok = False
+                try:
+                    ok = ok_value(callback(source, target), ok)
+                except self.error_handling[0] as e:
+                    ok = ok_value(self.error_handling[1](e), ok)
             return ok
         return task_action
 
@@ -96,6 +106,9 @@ class BaseFileMapper(object):
         if "actions" not in task:
             task["actions"] = [lambda targets: True]
         return task
+
+    def _handle_exception(self, ex):
+        raise ex
 
     @property
     def src(self):

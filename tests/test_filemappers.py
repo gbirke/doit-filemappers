@@ -56,8 +56,44 @@ def test_identitymapper_action_is_called_for_each_target():
     custom_callback = mock.Mock(return_value=True)
     mapper = fm.IdentityMapper([p1, p2], custom_callback)
     a = mapper.get_action(mapper.callback)
-    assert a(["dummy"]) # we provide one dummy target, which will be ignored
+    assert a(["dummy"]) # we must provide one dummy target, which will be ignored
     expected = [mock.call(p1, p1), mock.call(p2, p2)]
+    assert custom_callback.call_args_list == expected
+
+def test_identitymapper_exceptions_abort_calls():
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    err = RuntimeError("Test exceptions")
+    custom_callback = mock.Mock(side_effect=err)
+    mapper = fm.IdentityMapper([p1, p2], custom_callback)
+    a = mapper.get_action(mapper.callback)
+    with pytest.raises(RuntimeError) as e:
+        a(["dummy"]) # we must provide one dummy target, which will be ignored
+    assert e.value == err
+    expected = [mock.call(p1, p1)]
+    assert custom_callback.call_args_list == expected
+
+def test_identitymapper_exceptions_can_be_handled():
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    custom_callback = mock.Mock(side_effect=RuntimeError("Test exceptions"))
+    mapper = fm.IdentityMapper([p1, p2], custom_callback, error_handling=((RuntimeError), lambda e: True) )
+    a = mapper.get_action(mapper.callback)
+    assert a(["dummy"]) # we must provide one dummy target, which will be ignored
+    expected = [mock.call(p1, p1), mock.call(p2, p2)]
+    assert custom_callback.call_args_list == expected
+
+def test_identitymapper_exceptions_without_handlers_abort_calls():
+    p1 = pathlib.Path("one.foo")
+    p2 = pathlib.Path("two.foo")
+    err = RuntimeError("Test exceptions")
+    custom_callback = mock.Mock(side_effect=err)
+    mapper = fm.IdentityMapper([p1, p2], custom_callback, error_handling=((KeyError), lambda e: True))
+    a = mapper.get_action(mapper.callback)
+    with pytest.raises(RuntimeError) as e:
+        a(["dummy"]) # we must provide one dummy target, which will be ignored
+    assert e.value == err
+    expected = [mock.call(p1, p1)]
     assert custom_callback.call_args_list == expected
 
 def test_regexmapper_replaces_placeholders():
