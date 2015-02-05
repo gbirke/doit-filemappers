@@ -42,6 +42,7 @@ The following parameters are common for all mappers
 - `in_path`: Operating directory. The glob expression / Path items  in `src` will be evaluated in the context of this path. If `in_path` is absolute, the generated targets will be absolute too. Otherwise they will be relative. Defaults to `.` (current directory).
 - `file_dep`: If true, `get_task` creates a `file_dep` key with the source files from the mapper. For most mappers it is true.
 - `allow_empty_map`: See "Dealing with empty maps". Defaults to false.
+- `error_handling`: A tuple of handled exceptions and an error handler callable. If your callable raises an exeception, the error handling will be used. See "Handling exceptions". By default, exceptions raised in your callback will be undhandled.
 
 All parameters have default values and can be left out.
 
@@ -58,10 +59,29 @@ return mapper.get_task({"basename":"bar"}) # "bar" will override "foo"
 Using the task constructor parameter is important for chained tasks (see below) where you can't access the returned task directly.
 
 ### Callback return value
-By default DoIt execution will stop when a task returns `False`. If your `callback` function returns `False` for a source/target pair, the generated action will also return `False`. However, all source/target pairs will be iterated. If you want to stop at an error immediately, you must raise an exception.
+By default DoIt execution will stop when a task returns `False`. If your `callback` function returns `False` for a source/target pair, the generated action will also return `False`. However, all source/target pairs will be iterated. If you want to stop at an error immediately, you must raise an exception. If you have a custom error handling (see below), make sure that the error handling does not interfere.
 
 ### Multiple dependent mappers
 If you are building a chain of mappers where the output files (targets) of one processing step become the input (sources) of the next step, you can't use a glob expression for the `src` parameter in the following mappers after the first because the files don't exist yet. Instead, you must set the `src` of each task after the first to the `target` output of the preceding task. The ChainedMapper (see below) does that for you.
+
+### Error handling
+By default, if an exception occurs in your callback, the execution of the task will stop. With the `error_handling` parameter you can catch exceptions:
+
+```python
+def cautious_converter(_in, _out):
+    if _out.exists():
+        throw IOError("{} already exists!".format(_out))
+    # do conversion here
+
+def handle_existing_file(ex):
+    print ex.message
+
+mapper = GlobMapper("*.jpg", cautious_converter, replace="*.png",
+   error_handling=((IOError), handle_existing_file) 
+)
+```
+
+As you can see, `error_handling` is a tuple with a set of handled exception classes and a callable that will do something with the exceptions. All exceptions you don't specify will still stop the execution.
 
 ### Using the map without creating a task
 If you just want to use the file mapping, call the `get_map` method of the mapper. It will return a list of tuples where the first item of each tuple is the source file and the second item of each tuple is the target.
